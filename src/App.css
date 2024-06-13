@@ -26,6 +26,7 @@ header h1 {
 .between {
   font-size: 2rem;
   margin: 3rem 0;
+  padding: 0 2rem;
 }
 
 main {
@@ -86,4 +87,80 @@ main {
 
 .scoring p {
   font-size: 1.4rem;
+}
+
+/* Media Queries */
+
+@media (max-width: 1100px) {
+  header h1 {
+    font-size: 3rem;
+  }
+
+  .actual-number {
+    padding: 2.4rem;
+    max-width: 12%;
+    font-size: 4.2rem;
+  }
+
+  .between {
+    font-size: 1.8rem;
+  }
+
+  main {
+    max-width: 70%;
+  }
+}
+
+@media (max-width: 950px) {
+  main {
+    max-width: 80%;
+  }
+}
+
+@media (max-width: 800px) {
+  main {
+    max-width: 90%;
+  }
+}
+
+@media (max-width: 680px) {
+  .between {
+    font-size: 1.6rem;
+  }
+  .actual-number {
+    padding: 2rem;
+    max-width: 14%;
+    font-size: 4rem;
+  }
+
+  main {
+    max-width: 90%;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 560px) {
+  .between {
+    font-size: 1.4rem;
+    padding: 0 2rem;
+  }
+  .actual-number {
+    max-width: 16%;
+  }
+}
+
+@media (max-width: 480px) {
+  header h1 {
+    font-size: 2.4rem;
+  }
+  .actual-number {
+    max-width: 18%;
+    font-size: 3.6rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .actual-number {
+    max-width: 20%;
+  }
 }
