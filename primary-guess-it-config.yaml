@@ -1,0 +1,36 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guess-it-deployment
+spec:
+  selector:
+    matchLabels:
+      app: guess-it
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: guess-it
+    spec:
+      containers:
+        - name: guess-it-app
+          image: 533267425516.dkr.ecr.us-east-1.amazonaws.com/guess-it:latest
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guess-it-service
+  labels:
+    app: guess-it
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 80
+  selector:
+    app: guess-it
+  type: LoadBalancer
