@@ -1,70 +1,118 @@
-# Getting Started with Create React App
+# Multi-regional Deployment of a Highly Available Containerized Web Application on AWS
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This project demonstrates deploying a containerized web application on AWS using Amazon EC2, ECR, and EKS across two regions. The setup includes using AWS CloudFront for global content delivery and Route 53 for DNS management, ensuring high availability and resilience.
 
-## Available Scripts
+## Table of Contents
 
-In the project directory, you can run:
+- [Prerequisites](#prerequisites)
+- [Architecture](#architecture)
+- [Deployment Steps](#deployment-steps)
+  - [1. Set Up EC2 Instance for ECR and EKS Management](#1-set-up-ec2-instance-for-ecr-and-eks-management)
+  - [2. Configure ECR with Cross-Region Replication](#2-configure-ecr-with-cross-region-replication)
+  - [3. Deploy EKS Clusters](#3-deploy-eks-clusters)
+  - [4. Set Up CloudFront and Route 53](#4-set-up-cloudfront-and-route-53)
+- [Monitoring and Logging](#monitoring-and-logging)
+- [Conclusion](#conclusion)
 
-### `npm start`
+## Prerequisites
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Before starting, ensure you have the following:
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- An AWS account with appropriate IAM permissions
+- AWS CLI installed and configured
+- kubectl installed on the EC2 instance
+- eksctl installed on the EC2 instance
+- Docker installed on the EC2 instance
+- Node.js and npm installed on the EC2 instance
+- Domain name registered in AWS Route 53
 
-### `npm test`
+## Architecture
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+![Architecture Diagram](https://github.com/waleed-sabir/guess-it/blob/dev/architecture-design.png)
 
-### `npm run build`
+## Deployment Steps
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### 1. Set Up EC2 Instance for ECR and EKS Management
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+1. **Launch an EC2 Instance**
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- Create an EC2 instance in the primary region.
+- SSH into the EC2 instance and install Docker and the AWS CLI.
+- Install eksctl on the EC2 instance for managing the EKS clusters.
 
-### `npm run eject`
+2. **Authenticate Docker to Amazon ECR**
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```sh
+aws ecr get-login-password --region <primary-region> | docker login --username AWS --password-stdin <account-id>.dkr.ecr.<primary-region>.amazonaws.com
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+3.  **Build and Push Docker Image**
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+- Build the Docker image locally on the EC2 instance.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+```sh
+docker build -t your-image-name .
+```
 
-## Learn More
+- Tag and push the image to the ECR repository.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```sh
+docker tag your-image-name:latest <account-id>.dkr.ecr.<primary-region>.amazonaws.com/your-repo-name:latest
+docker push <account-id>.dkr.ecr.<primary-region>.amazonaws.com/your-repo-name:latest
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### 2. Configure ECR with Cross-Region Replication
 
-### Code Splitting
+1. **Enable Cross-Region Replication**
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+- Set up cross-region replication from the primary region to the secondary region for the ECR repository via the AWS Management Console or CLI.
 
-### Analyzing the Bundle Size
+### 3. Deploy EKS Clusters
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+1. **EKS Cluster in Primary Region (AWS Console)**
 
-### Making a Progressive Web App
+- Create an EKS cluster in the primary region using the AWS Management Console. Follow the standard process, including VPC setup, node group creation, and IAM roles configuration.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+2. **EKS Cluster in Secondary Region (eksctl)**
 
-### Advanced Configuration
+- Use `eksctl` to create an EKS cluster in the secondary region from the EC2 instance.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+```sh
+eksctl create cluster --name secondary-cluster --region <secondary-region> --nodegroup-name standard-workers --node-type t3.medium --nodes 3
+```
 
-### Deployment
+3. **Deploy Application to EKS Clusters**
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+- Update kubeconfig for each cluster and deploy the application using Kubernetes manifests.
 
-### `npm run build` fails to minify
+```sh
+aws eks update-kubeconfig --region <region> --name <cluster-name>
+kubectl apply -f k8s
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+### 4. Set Up CloudFront and Route 53
+
+1. **Create CloudFront Distribution**
+
+- Set up a CloudFront distribution with the Application Load Balancers (ALBs) of both EKS clusters as custom origins.
+- Create an origin group and configure failover between the ALBs.
+
+2. **Route 53 Custom Domain Configuration**
+
+- Map the CloudFront distribution domain name to a custom domain name in Route 53.
+- Configure an Alias record in Route 53 pointing to the CloudFront distribution.
+
+## Monitoring and Logging
+
+1. **Set Up CloudWatch for Logs and Metrics**
+
+- Enable CloudWatch Logs for EKS pods and application logs.
+- Set up key metrics like CPU usage, memory usage, and request count to monitor the health and performance of the infrastructure.
+
+2. **Create CloudWatch Alarms**
+
+- Configure CloudWatch Alarms for key metrics to notify you of critical issues. Use Amazon SNS for alarm notifications.
+
+## Conclusion
+
+By following these steps, you have successfully developed and deployed a containerized React.js web application on AWS. The application is globally accessible, highly available, and monitored for performance and health.
