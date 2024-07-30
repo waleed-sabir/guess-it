@@ -1,0 +1,27 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: guess-it-secondary-cluster
+  region: eu-west-1
+  version: "1.30"
+
+availabilityZones:
+  - eu-west-1a
+  - eu-west-1b
+
+vpc:
+  clusterEndpoints:
+    publicAccess: true
+    privateAccess: true
+  nat:
+    gateway: HighlyAvailable
+
+managedNodeGroups:
+  - name: managed-node-group-secondary
+    instanceType: t3.small
+    desiredCapacity: 1
+    minSize: 1
+    maxSize: 3
+    privateNetworking: true
+    amiFamily: AmazonLinux2
